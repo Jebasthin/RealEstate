@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream: #F3E9DC;
+  --color-caramel: #C08552;
+  --color-brownie: #5E3023;
+  --color-coffee: #895737;
+}
+
+:root {
+  --background: #F3E9DC; /* Default Cream background */
+  --foreground: #5E3023; /* Default Brownie text */
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  min-height: 100%;
+}
