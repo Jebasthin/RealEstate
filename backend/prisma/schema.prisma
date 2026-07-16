@@ -18,11 +18,13 @@ model User {
   email        String         @unique
   passwordHash String
   fullName     String
+  mobile       String?
   role         Role           @default(BUYER)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   refreshTokens RefreshToken[]
   properties   Property[]
+  enquiries    Enquiry[]
 }
 
 model RefreshToken {
@@ -34,21 +36,117 @@ model RefreshToken {
   createdAt DateTime @default(now())
 }
 
+enum PropertyStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  AVAILABLE
+  BOOKED
+  SOLD
+  ARCHIVED
+}
+
+enum PropertyType {
+  HOUSE
+  APARTMENT
+  VILLA
+  LAND
+  COMMERCIAL
+}
+
 model Property {
-  id           String   @id @default(uuid())
+  id           String            @id @default(uuid())
   title        String
   description  String
   price        Float
-  city         String
-  address      String
+  area         Float             // in Sq.Ft.
   bedrooms     Int
-  propertyType String   // e.g., APARTMENT, HOUSE, VILLA, PLOT
+  bathrooms    Int
+  parking      Boolean           @default(false)
+  status       PropertyStatus    @default(PENDING)
+  propertyType PropertyType
+  stateId      String
+  state        State             @relation(fields: [stateId], references: [id], onDelete: Restrict)
+  cityId       String
+  city         City              @relation(fields: [cityId], references: [id], onDelete: Restrict)
+  areaId       String
+  areaLocality Area              @relation(fields: [areaId], references: [id], onDelete: Restrict)
   ownerId      String
-  owner        User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  owner        User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  images       PropertyImage[]
+  amenities    PropertyAmenity[]
+  enquiries    Enquiry[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  viewId       Int?
 
-  @@index([city])
+  @@index([cityId])
   @@index([price])
   @@index([propertyType])
+  @@index([stateId])
+  @@index([areaId])
+  @@index([status])
 }
+
+model PropertyImage {
+  id         String   @id @default(uuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  url        String   @db.Text // Long Base64 strings or URLs
+  isPrimary  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model Amenity {
+  id         String            @id @default(uuid())
+  name       String            @unique
+  properties PropertyAmenity[]
+}
+
+model PropertyAmenity {
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  amenityId  String
+  amenity    Amenity  @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+
+  @@id([propertyId, amenityId])
+}
+
+model Enquiry {
+  id         String   @id @default(uuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  customerId String
+  customer   User     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  message    String
+  createdAt  DateTime @default(now())
+}
+
+model State {
+  id         String     @id @default(uuid())
+  name       String     @unique
+  cities     City[]
+  properties Property[]
+}
+
+model City {
+  id         String     @id @default(uuid())
+  name       String
+  stateId    String
+  state      State      @relation(fields: [stateId], references: [id], onDelete: Cascade)
+  areas      Area[]
+  properties Property[]
+
+  @@unique([name, stateId])
+}
+
+model Area {
+  id         String     @id @default(uuid())
+  name       String
+  cityId     String
+  city       City       @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  properties Property[]
+
+  @@unique([name, cityId])
+}
+

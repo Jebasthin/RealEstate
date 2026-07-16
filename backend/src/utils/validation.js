@@ -19,6 +19,7 @@ export const registerSchema = z.object({
       errorMap: () => ({ message: 'Role must be either BUYER, SELLER, or ADMIN' }),
     })
     .default('BUYER'),
+  mobile: z.string().optional(),
 });
 
 export const loginSchema = z.object({

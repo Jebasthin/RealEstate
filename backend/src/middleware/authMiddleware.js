@@ -49,3 +49,27 @@ export const restrictTo = (...roles) => {
     }
   };
 };
+
+/**
+ * Optionally parse JWT Access Token if present, without rejecting request if absent
+ */
+export const parseUserOptional = (req, res, next) => {
+  try {
+    let token;
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith('Bearer')
+    ) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (token) {
+      const decoded = verifyAccessToken(token);
+      req.user = decoded;
+    }
+  } catch (error) {
+    // Silently ignore invalid token errors to let request pass as a guest
+  }
+  next();
+};
+

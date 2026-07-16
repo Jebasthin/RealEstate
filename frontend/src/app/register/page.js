@@ -4,13 +4,14 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, Lock, Mail, User, Loader2, Home, Sparkles, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, User, Loader2, Home, Sparkles, ArrowLeft, Phone } from 'lucide-react';
 
 export default function RegisterPage() {
   const { register } = useAuth();
   const router = useRouter();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('BUYER'); // BUYER or SELLER
   const [showPassword, setShowPassword] = useState(false);
@@ -22,7 +23,7 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
 
-    const result = await register(email, password, fullName, role);
+    const result = await register(email, password, fullName, role, mobile);
     if (result.success) {
       router.push('/login?registered=true');
     } else {
@@ -93,6 +94,27 @@ export default function RegisterPage() {
             </div>
 
             <div>
+              <label htmlFor="mobile" className="block text-xs font-bold text-brownie uppercase tracking-wider mb-2">
+                Mobile Number
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-coffee">
+                  <Phone className="h-4.5 w-4.5" />
+                </div>
+                <input
+                  id="mobile"
+                  name="mobile"
+                  type="tel"
+                  required
+                  value={mobile}
+                  onChange={(e) => setMobile(e.target.value)}
+                  className="block w-full pl-11 pr-4 py-3.5 bg-cream/10 border border-caramel/25 rounded-2xl text-brownie placeholder-coffee/40 focus:outline-none focus:ring-2 focus:ring-caramel/30 focus:border-caramel transition-all duration-300 text-sm font-medium"
+                  placeholder="e.g. +91 9876543210"
+                />
+              </div>
+            </div>
+
+            <div>
               <label htmlFor="email" className="block text-xs font-bold text-brownie uppercase tracking-wider mb-2">
                 Email Address
               </label>
@@ -146,7 +168,7 @@ export default function RegisterPage() {
               <label className="block text-xs font-bold text-brownie uppercase tracking-wider mb-3">
                 Account Type
               </label>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <button
                   type="button"
                   onClick={() => setRole('BUYER')}
@@ -186,6 +208,27 @@ export default function RegisterPage() {
                   <h4 className="text-sm font-bold text-brownie">Seller</h4>
                   <p className="text-[11px] text-coffee mt-1 leading-normal font-medium">
                     List and advertise properties for rent/sale
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRole('ADMIN')}
+                  className={`relative p-4 rounded-2xl border text-left transition-all duration-300 focus:outline-none ${
+                    role === 'ADMIN'
+                      ? 'border-brownie bg-brownie/5 shadow-md shadow-brownie/5'
+                      : 'border-caramel/20 bg-cream/10 hover:border-caramel/50'
+                  }`}
+                >
+                  {role === 'ADMIN' && (
+                    <span className="absolute top-3 right-3 flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-caramel opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-caramel"></span>
+                    </span>
+                  )}
+                  <h4 className="text-sm font-bold text-brownie">Admin</h4>
+                  <p className="text-[11px] text-coffee mt-1 leading-normal font-medium">
+                    Moderate properties and system listings
                   </p>
                 </button>
               </div>

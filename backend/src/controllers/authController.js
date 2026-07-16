@@ -20,7 +20,7 @@ export const register = async (req, res, next) => {
     // Validate request body
     const validatedData = registerSchema.parse(req.body);
 
-    const { email, password, fullName, role } = validatedData;
+    const { email, password, fullName, role, mobile } = validatedData;
 
     // Check if email already exists
     const existingUser = await prisma.user.findUnique({
@@ -41,12 +41,14 @@ export const register = async (req, res, next) => {
         passwordHash,
         fullName,
         role,
+        mobile: mobile || null,
       },
       select: {
         id: true,
         email: true,
         fullName: true,
         role: true,
+        mobile: true,
         createdAt: true,
       },
     });
@@ -117,6 +119,7 @@ export const login = async (req, res, next) => {
           email: user.email,
           fullName: user.fullName,
           role: user.role,
+          mobile: user.mobile,
         },
       },
     });
@@ -252,6 +255,7 @@ export const getMe = async (req, res, next) => {
         email: true,
         fullName: true,
         role: true,
+        mobile: true,
         createdAt: true,
       },
     });
