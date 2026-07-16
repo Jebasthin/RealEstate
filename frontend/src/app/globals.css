@@ -8,29 +8,30 @@
   
   --animate-slide-left: slide-left 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   --animate-slide-right: slide-right 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
 
-  @keyframes slide-left {
-    from {
-      transform: translateX(-60px);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
+@keyframes slide-left {
+  from {
+    transform: translateX(-60px);
+    opacity: 0;
   }
-
-  @keyframes slide-right {
-    from {
-      transform: translateX(60px);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
+  to {
+    transform: translateX(0);
+    opacity: 1;
   }
 }
+
+@keyframes slide-right {
+  from {
+    transform: translateX(60px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
 
 :root {
   --background: #F3E9DC; /* Default Cream background */
