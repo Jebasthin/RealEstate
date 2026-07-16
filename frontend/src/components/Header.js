@@ -20,7 +20,7 @@ export default function Header() {
                 <Home className="h-5 w-5 text-cream" />
               </div>
               <span className="font-extrabold text-xl tracking-tight text-brownie">
-                Aether Estate
+                Jose Estate
               </span>
             </Link>
           </div>

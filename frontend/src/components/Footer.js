@@ -16,7 +16,7 @@ export default function Footer() {
                 <Home className="h-4 w-4 text-cream" />
               </div>
               <span className="font-extrabold text-lg text-cream tracking-tight">
-                Aether Estate
+                Jose Estate
               </span>
             </div>
             <p className="text-sm text-cream/70 leading-relaxed">
@@ -53,11 +53,11 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="h-4 w-4 text-caramel" />
-                <span>+1 (555) 839-2910</span>
+                <span>+91 98765 43210</span>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="h-4 w-4 text-caramel" />
-                <span>contact@aetherestate.com</span>
+                <span>contact@joseestate.com</span>
               </li>
             </ul>
           </div>
@@ -81,7 +81,7 @@ export default function Footer() {
 
         {/* Copywrite and disclaimer */}
         <div className="border-t border-caramel/10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-cream/50">
-          <p>© {new Date().getFullYear()} Aether Estate. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Jose Estate. All rights reserved.</p>
           <div className="flex gap-6">
             <a href="#" className="hover:underline">Legal</a>
             <a href="#" className="hover:underline">Sitemap</a>

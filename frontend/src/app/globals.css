@@ -5,6 +5,31 @@
   --color-caramel: #C08552;
   --color-brownie: #5E3023;
   --color-coffee: #895737;
+  
+  --animate-slide-left: slide-left 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-slide-right: slide-right 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+
+  @keyframes slide-left {
+    from {
+      transform: translateX(-60px);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slide-right {
+    from {
+      transform: translateX(60px);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
 }
 
 :root {
@@ -16,4 +41,14 @@ body {
   background-color: var(--background);
   color: var(--foreground);
   min-height: 100%;
+}
+
+.card-animate-left {
+  opacity: 0;
+  animation: slide-left 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.card-animate-right {
+  opacity: 0;
+  animation: slide-right 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

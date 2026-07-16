@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Aether Estate - Premium Real Estate Platform",
+  title: "Jose Estate - Premium Real Estate Platform",
   description: "Experience premium home search and selling services",
 };
 
