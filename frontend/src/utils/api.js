@@ -40,7 +40,8 @@ export async function apiRequest(endpoint, options = {}) {
       !options._retry && 
       endpoint !== '/auth/login' && 
       endpoint !== '/auth/register' &&
-      endpoint !== '/auth/refresh'
+      endpoint !== '/auth/refresh' &&
+      endpoint !== '/auth/me'
     ) {
       options._retry = true;
       

@@ -13,26 +13,35 @@ export const AuthProvider = ({ children }) => {
 
   // Load user session on mount
   useEffect(() => {
+    let ignore = false; // Guard against React StrictMode double-invoke
+
     const initializeAuth = async () => {
       try {
         // Attempt to silent refresh on load (gets new access token via HttpOnly refresh cookie)
         const response = await apiRequest('/auth/refresh', { method: 'POST' });
-        
+
+        if (ignore) return; // Discard result if this effect was cleaned up (StrictMode)
+
         if (response.ok) {
           const data = await response.json();
           setAccessToken(data.data.accessToken);
-          
+
           // Fetch user profile
           const profileRes = await apiRequest('/auth/me');
-          if (profileRes.ok) {
+          if (!ignore && profileRes.ok) {
             const profileData = await profileRes.json();
             setUser(profileData.data.user);
           }
         }
+        // If refresh returns 401, user simply has no session — stay logged out silently
       } catch (error) {
-        console.error('Error restoring session:', error);
+        if (!ignore) {
+          console.error('Error restoring session:', error);
+        }
       } finally {
-        setLoading(false);
+        if (!ignore) {
+          setLoading(false);
+        }
       }
     };
 
@@ -46,6 +55,7 @@ export const AuthProvider = ({ children }) => {
 
     window.addEventListener('auth-logout', handleForceLogout);
     return () => {
+      ignore = true; // Prevent stale state updates on cleanup
       window.removeEventListener('auth-logout', handleForceLogout);
     };
   }, [router]);

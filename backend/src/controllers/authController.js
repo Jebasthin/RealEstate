@@ -129,7 +129,9 @@ export const login = async (req, res, next) => {
 };
 
 /**
- * Refresh access token using rotation strategy
+ * Refresh access token — stable reuse strategy (no rotation)
+ * The refresh token stays valid until its TTL expires or the user logs out.
+ * This avoids double-call issues from React StrictMode during page refresh.
  */
 export const refresh = async (req, res, next) => {
   try {
@@ -144,10 +146,8 @@ export const refresh = async (req, res, next) => {
     try {
       decodedPayload = verifyRefreshToken(refreshToken);
     } catch (err) {
-      // Invalid/expired token -> clear database records for this token if it exists
-      await prisma.refreshToken.deleteMany({
-        where: { token: refreshToken }
-      });
+      // Invalid/expired JWT signature — clear cookie only, don't delete DB record since
+      // token may not exist in DB if it was already cleared
       res.clearCookie('refreshToken');
       throw new ApiError(401, 'Invalid refresh token.');
     }
@@ -159,13 +159,13 @@ export const refresh = async (req, res, next) => {
     });
 
     if (!savedTokenRecord) {
-      // Token not in database (could be a reused revoked token, or fake)
-      // For safety, clear cookie
-      res.clearCookie('refreshToken');
+      // Token not in database (revoked on logout or fake token)
+      // Do NOT clear cookie here — it may already have been updated to a valid new token
+      // by a concurrent request. Just refuse with 401.
       throw new ApiError(401, 'Refresh token has been revoked or is invalid.');
     }
 
-    // Check expiration
+    // 3. Check expiration against DB record
     if (new Date() > new Date(savedTokenRecord.expiresAt)) {
       await prisma.refreshToken.delete({ where: { id: savedTokenRecord.id } });
       res.clearCookie('refreshToken');
@@ -174,28 +174,11 @@ export const refresh = async (req, res, next) => {
 
     const user = savedTokenRecord.user;
 
-    // 3. Implement Refresh Token Rotation (RTR) for security
-    // Delete the old refresh token
-    await prisma.refreshToken.delete({
-      where: { id: savedTokenRecord.id },
-    });
-
-    // Generate new set of tokens
+    // 4. Issue a fresh access token (refresh token is REUSED — not rotated)
     const newAccessToken = generateAccessToken(user);
-    const newRefreshToken = generateRefreshToken(user);
 
-    // Save new refresh token in DB
-    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_COOKIE_MAX_AGE);
-    await prisma.refreshToken.create({
-      data: {
-        userId: user.id,
-        token: newRefreshToken,
-        expiresAt,
-      },
-    });
-
-    // Send new refresh token in cookie
-    res.cookie('refreshToken', newRefreshToken, {
+    // Re-set the same refresh token cookie to slide the browser expiry window
+    res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',

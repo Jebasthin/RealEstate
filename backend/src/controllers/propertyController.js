@@ -104,7 +104,24 @@ export const createProperty = async (req, res, next) => {
  */
 export const listProperties = async (req, res, next) => {
   try {
-    const { city, stateId, cityId, areaId, propertyType, bedrooms, minPrice, maxPrice, sortBy, order, page, limit } = req.query;
+    const { 
+      city, 
+      stateId, 
+      cityId, 
+      areaId, 
+      propertyType, 
+      bedrooms, 
+      bathrooms,
+      minPrice, 
+      maxPrice, 
+      minArea,
+      maxArea,
+      amenityIds,
+      sortBy, 
+      order, 
+      page, 
+      limit 
+    } = req.query;
 
     const whereClause = {
       status: 'APPROVED', // Public search returns approved listings only
@@ -135,11 +152,42 @@ export const listProperties = async (req, res, next) => {
       whereClause.bedrooms = parseInt(bedrooms);
     }
 
+    // Filter by bathrooms
+    if (bathrooms) {
+      whereClause.bathrooms = parseInt(bathrooms);
+    }
+
     // Filter by budget bounds
     if (minPrice || maxPrice) {
       whereClause.price = {};
       if (minPrice) whereClause.price.gte = parseFloat(minPrice);
       if (maxPrice) whereClause.price.lte = parseFloat(maxPrice);
+    }
+
+    // Filter by area (Sq. Ft.) bounds
+    if (minArea || maxArea) {
+      whereClause.area = {};
+      if (minArea) whereClause.area.gte = parseFloat(minArea);
+      if (maxArea) whereClause.area.lte = parseFloat(maxArea);
+    }
+
+    // Filter by amenities
+    if (amenityIds) {
+      const amenityIdList = Array.isArray(amenityIds)
+        ? amenityIds
+        : typeof amenityIds === 'string'
+          ? amenityIds.split(',').filter(Boolean)
+          : [];
+
+      if (amenityIdList.length > 0) {
+        whereClause.AND = amenityIdList.map((id) => ({
+          amenities: {
+            some: {
+              amenityId: id,
+            },
+          },
+        }));
+      }
     }
 
     // Sorting configs
@@ -337,6 +385,11 @@ export const updateProperty = async (req, res, next) => {
       throw new ApiError(403, 'Permission denied. You do not own this listing.');
     }
 
+    // Only allow editing if status is PENDING (non-admin)
+    if (property.status !== 'PENDING' && req.user.role !== 'ADMIN') {
+      throw new ApiError(400, 'Only pending listings can be edited.');
+    }
+
     const {
       title,
       description,
@@ -350,6 +403,7 @@ export const updateProperty = async (req, res, next) => {
       cityId,
       areaId,
       amenityIds,
+      images,
     } = req.body;
 
     const updateData = {};
@@ -378,6 +432,21 @@ export const updateProperty = async (req, res, next) => {
       updateData.amenities = {
         create: amenityIds.map((aId) => ({
           amenityId: aId,
+        })),
+      };
+    }
+
+    // Update images if provided
+    if (images !== undefined) {
+      // Clear existing images
+      await prisma.propertyImage.deleteMany({
+        where: { propertyId: id },
+      });
+
+      updateData.images = {
+        create: images.map((imgUrl, index) => ({
+          url: imgUrl,
+          isPrimary: index === 0,
         })),
       };
     }
