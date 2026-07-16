@@ -7,7 +7,7 @@ import { apiRequest } from '../../../utils/api';
 import DashboardNavbar from '../../../components/DashboardNavbar';
 import { useRouter } from 'next/navigation';
 import { 
-  Loader2, MapPin, Bed, Bath, Mail, Phone, ChevronLeft, ChevronRight, CheckCircle, XCircle, Search
+  Loader2, MapPin, Bed, Bath, Mail, Phone, ChevronLeft, ChevronRight, CheckCircle, XCircle, Search, Filter
 } from 'lucide-react';
 
 
@@ -23,6 +23,9 @@ export default function BuyerDashboardPage() {
   const [myEnquiries, setMyEnquiries] = useState([]);
   const [loadingEnquiries, setLoadingEnquiries] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState(null);
+  const [cardImageIndices, setCardImageIndices] = useState({});
+  const [drawerImageIndex, setDrawerImageIndex] = useState(0);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   
   // Buyer Search State
   const [searchStateId, setSearchStateId] = useState('');
@@ -31,6 +34,11 @@ export default function BuyerDashboardPage() {
   const [searchType, setSearchType] = useState('');
   const [searchMinPrice, setSearchMinPrice] = useState('');
   const [searchMaxPrice, setSearchMaxPrice] = useState('');
+  const [searchMinArea, setSearchMinArea] = useState('');
+  const [searchMaxArea, setSearchMaxArea] = useState('');
+  const [searchBedrooms, setSearchBedrooms] = useState('');
+  const [searchBathrooms, setSearchBathrooms] = useState('');
+  const [searchSelectedAmenities, setSearchSelectedAmenities] = useState([]);
   const [searchCitiesList, setSearchCitiesList] = useState([]);
   const [searchAreasList, setSearchAreasList] = useState([]);
   
@@ -160,6 +168,13 @@ export default function BuyerDashboardPage() {
       if (searchType) queryParams.append('propertyType', searchType);
       if (searchMinPrice) queryParams.append('minPrice', searchMinPrice);
       if (searchMaxPrice) queryParams.append('maxPrice', searchMaxPrice);
+      if (searchMinArea) queryParams.append('minArea', searchMinArea);
+      if (searchMaxArea) queryParams.append('maxArea', searchMaxArea);
+      if (searchBedrooms) queryParams.append('bedrooms', searchBedrooms);
+      if (searchBathrooms) queryParams.append('bathrooms', searchBathrooms);
+      if (searchSelectedAmenities.length > 0) {
+        queryParams.append('amenityIds', searchSelectedAmenities.join(','));
+      }
 
       const res = await apiRequest(`/properties?${queryParams.toString()}`);
       if (res.ok) {
@@ -236,6 +251,11 @@ export default function BuyerDashboardPage() {
     setSearchType('');
     setSearchMinPrice('');
     setSearchMaxPrice('');
+    setSearchMinArea('');
+    setSearchMaxArea('');
+    setSearchBedrooms('');
+    setSearchBathrooms('');
+    setSearchSelectedAmenities([]);
     setBrowsePage(1);
     
     // Clear list options
@@ -264,10 +284,243 @@ export default function BuyerDashboardPage() {
     window.location.href = `mailto:${email}?subject=Regarding my inquiry on your property: ${encodeURIComponent(title)}`;
   };
 
+  const handlePrevCardImage = (e, property) => {
+    e.stopPropagation();
+    const len = property.images?.length || 0;
+    if (len <= 1) return;
+    setCardImageIndices((prev) => {
+      const currentIdx = prev[property.id] || 0;
+      return {
+        ...prev,
+        [property.id]: (currentIdx - 1 + len) % len,
+      };
+    });
+  };
+
+  const handleNextCardImage = (e, property) => {
+    e.stopPropagation();
+    const len = property.images?.length || 0;
+    if (len <= 1) return;
+    setCardImageIndices((prev) => {
+      const currentIdx = prev[property.id] || 0;
+      return {
+        ...prev,
+        [property.id]: (currentIdx + 1) % len,
+      };
+    });
+  };
+
   const handleCardClick = (property) => {
     setDrawerEnquirySuccess('');
     setDrawerEnquiryError('');
     setSelectedProperty(property);
+    setDrawerImageIndex(0);
+  };
+
+  const renderFilterForm = (isMobile = false) => {
+    return (
+      <form 
+        onSubmit={(e) => {
+          handleSearchSubmit(e);
+          if (isMobile) setShowMobileFilters(false);
+        }} 
+        className="space-y-4"
+      >
+        <div className={isMobile ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 sm:grid-cols-3 gap-4"}>
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-coffee uppercase tracking-wider">State</label>
+            <select
+              value={searchStateId}
+              onChange={(e) => setSearchStateId(e.target.value)}
+              className="w-full px-4 py-3 bg-cream/10 border border-caramel/25 rounded-2xl text-brownie text-sm font-semibold focus:outline-none"
+            >
+              <option value="">All States</option>
+              {statesList.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-coffee uppercase tracking-wider">City</label>
+            <select
+              disabled={!searchStateId}
+              value={searchCityId}
+              onChange={(e) => setSearchCityId(e.target.value)}
+              className="w-full px-4 py-3 bg-cream/10 border border-caramel/25 rounded-2xl text-brownie text-sm font-semibold focus:outline-none disabled:opacity-50"
+            >
+              <option value="">All Cities</option>
+              {searchCitiesList.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-coffee uppercase tracking-wider">Area / Locality</label>
+            <select
+              disabled={!searchCityId}
+              value={searchAreaId}
+              onChange={(e) => setSearchAreaId(e.target.value)}
+              className="w-full px-4 py-3 bg-cream/10 border border-caramel/25 rounded-2xl text-brownie text-sm font-semibold focus:outline-none disabled:opacity-50"
+            >
+              <option value="">All Areas</option>
+              {searchAreasList.map((a) => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className={isMobile ? "grid grid-cols-2 gap-3" : "grid grid-cols-1 sm:grid-cols-4 gap-4 items-end"}>
+          <div className={`space-y-1 ${isMobile ? "col-span-2" : ""}`}>
+            <label className="text-[10px] font-bold text-coffee uppercase tracking-wider">Property Type</label>
+            <select
+              value={searchType}
+              onChange={(e) => setSearchType(e.target.value)}
+              className="w-full px-4 py-3 bg-cream/10 border border-caramel/25 rounded-2xl text-brownie text-sm font-semibold focus:outline-none"
+            >
+              <option value="">All Types</option>
+              <option value="HOUSE">House</option>
+              <option value="APARTMENT">Apartment</option>
+              <option value="VILLA">Villa</option>
+              <option value="LAND">Land</option>
+              <option value="COMMERCIAL">Commercial</option>
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-coffee uppercase tracking-wider">Bedrooms</label>
+            <select
+              value={searchBedrooms}
+              onChange={(e) => setSearchBedrooms(e.target.value)}
+              className="w-full px-4 py-3 bg-cream/10 border border-caramel/25 rounded-2xl text-brownie text-sm font-semibold focus:outline-none"
+            >
+              <option value="">Any BHK</option>
+              <option value="1">1 BHK</option>
+              <option value="2">2 BHK</option>
+              <option value="3">3 BHK</option>
+              <option value="4">4 BHK</option>
+              <option value="5">5 BHK</option>
+              <option value="6">6+ BHK</option>
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-coffee uppercase tracking-wider">Bathrooms</label>
+            <select
+              value={searchBathrooms}
+              onChange={(e) => setSearchBathrooms(e.target.value)}
+              className="w-full px-4 py-3 bg-cream/10 border border-caramel/25 rounded-2xl text-brownie text-sm font-semibold focus:outline-none"
+            >
+              <option value="">Any Baths</option>
+              <option value="1">1 Bath</option>
+              <option value="2">2 Baths</option>
+              <option value="3">3 Baths</option>
+              <option value="4">4 Baths</option>
+              <option value="5">5+ Baths</option>
+            </select>
+          </div>
+
+          <div className={`space-y-1 ${isMobile ? "col-span-2" : ""}`}>
+            <label className="text-[10px] font-bold text-coffee uppercase tracking-wider">Min Budget (₹)</label>
+            <input
+              type="number"
+              value={searchMinPrice}
+              onChange={(e) => setSearchMinPrice(e.target.value)}
+              placeholder="e.g. 500000"
+              className="w-full px-4 py-2.5 bg-cream/10 border border-caramel/25 rounded-2xl text-brownie placeholder-coffee/40 text-sm font-semibold focus:outline-none"
+            />
+          </div>
+        </div>
+
+        <div className={isMobile ? "grid grid-cols-2 gap-3" : "grid grid-cols-1 sm:grid-cols-4 gap-4 items-end"}>
+          <div className={`space-y-1 ${isMobile ? "col-span-2" : ""}`}>
+            <label className="text-[10px] font-bold text-coffee uppercase tracking-wider">Max Budget (₹)</label>
+            <input
+              type="number"
+              value={searchMaxPrice}
+              onChange={(e) => setSearchMaxPrice(e.target.value)}
+              placeholder="e.g. 20000000"
+              className="w-full px-4 py-2.5 bg-cream/10 border border-caramel/25 rounded-2xl text-brownie placeholder-coffee/40 text-sm font-semibold focus:outline-none"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-coffee uppercase tracking-wider">Min Sq. Ft.</label>
+            <input
+              type="number"
+              value={searchMinArea}
+              onChange={(e) => setSearchMinArea(e.target.value)}
+              placeholder="e.g. 500"
+              className="w-full px-4 py-2.5 bg-cream/10 border border-caramel/25 rounded-2xl text-brownie placeholder-coffee/40 text-sm font-semibold focus:outline-none"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-coffee uppercase tracking-wider">Max Sq. Ft.</label>
+            <input
+              type="number"
+              value={searchMaxArea}
+              onChange={(e) => setSearchMaxArea(e.target.value)}
+              placeholder="e.g. 10000"
+              className="w-full px-4 py-2.5 bg-cream/10 border border-caramel/25 rounded-2xl text-brownie placeholder-coffee/40 text-sm font-semibold focus:outline-none"
+            />
+          </div>
+
+          <div className={`flex gap-2 ${isMobile ? "col-span-2 pt-2" : ""}`}>
+            <button
+              type="submit"
+              className="flex-grow py-3 bg-brownie hover:bg-caramel text-cream font-bold rounded-2xl shadow-sm text-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <Search className="h-4 w-4" /> Search
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                handleClearFilters();
+                if (isMobile) setShowMobileFilters(false);
+              }}
+              className="px-4 py-3 bg-cream border border-caramel/20 hover:bg-caramel/10 text-coffee font-bold rounded-2xl text-sm transition-colors cursor-pointer"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+
+        {/* Amenities filter pills */}
+        {allAmenities && allAmenities.length > 0 && (
+          <div className="space-y-2 pt-2 border-t border-caramel/15">
+            <label className="text-[10px] font-bold text-coffee uppercase tracking-wider block">Filter by Amenities</label>
+            <div className="flex flex-wrap gap-2">
+              {allAmenities.map((amenity) => {
+                const isSelected = searchSelectedAmenities.includes(amenity.id);
+                return (
+                  <button
+                    key={amenity.id}
+                    type="button"
+                    onClick={() => {
+                      if (isSelected) {
+                        setSearchSelectedAmenities(prev => prev.filter(id => id !== amenity.id));
+                      } else {
+                        setSearchSelectedAmenities(prev => [...prev, amenity.id]);
+                      }
+                    }}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer select-none ${
+                      isSelected
+                        ? 'bg-brownie border-brownie text-cream shadow-sm scale-95'
+                        : 'bg-cream/20 border-caramel/25 text-coffee hover:bg-caramel/10'
+                    }`}
+                  >
+                    {amenity.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </form>
+    );
   };
 
   if (!user || user.role !== 'BUYER') {
@@ -348,124 +601,57 @@ export default function BuyerDashboardPage() {
             {/* BROWSE PROPERTIES TAB */}
             {activeTab === 'BROWSE' && (
               <div className="space-y-8">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center gap-4">
                   <div>
-                    <h2 className="text-2xl font-extrabold text-brownie">Explore Premium Properties</h2>
-                    <p className="text-xs text-coffee font-medium mt-1">Search through verified listings with database-backed speeds.</p>
+                    <h2 className="text-lg md:text-2xl font-extrabold text-brownie">Explore Premium Properties</h2>
+                    <p className="text-[10px] md:text-xs text-coffee font-medium mt-0.5 md:mt-1">Search through verified listings with database-backed speeds.</p>
                   </div>
-                  <span className="text-xs bg-brownie/10 border border-caramel/20 text-brownie font-bold px-3 py-1.5 rounded-full">
+                  <span className="text-[9px] md:text-xs bg-brownie/10 border border-caramel/20 text-brownie font-extrabold px-2.5 py-1 md:px-3 md:py-1.5 rounded-full shrink-0 text-center leading-tight">
                     {browsePagination.total.toLocaleString()} Properties Found
                   </span>
                 </div>
 
-                {/* Cascading Location & Budget Filters */}
-                <section className="bg-cream/40 border border-caramel/25 p-6 rounded-3xl shadow-sm">
-                  <form onSubmit={handleSearchSubmit} className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-coffee uppercase tracking-wider">State</label>
-                        <select
-                          value={searchStateId}
-                          onChange={(e) => setSearchStateId(e.target.value)}
-                          className="w-full px-4 py-3 bg-cream/10 border border-caramel/25 rounded-2xl text-brownie text-sm font-semibold focus:outline-none"
-                        >
-                          <option value="">All States</option>
-                          {statesList.map((s) => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-coffee uppercase tracking-wider">City</label>
-                        <select
-                          disabled={!searchStateId}
-                          value={searchCityId}
-                          onChange={(e) => setSearchCityId(e.target.value)}
-                          className="w-full px-4 py-3 bg-cream/10 border border-caramel/25 rounded-2xl text-brownie text-sm font-semibold focus:outline-none disabled:opacity-50"
-                        >
-                          <option value="">All Cities</option>
-                          {searchCitiesList.map((c) => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-coffee uppercase tracking-wider">Area / Locality</label>
-                        <select
-                          disabled={!searchCityId}
-                          value={searchAreaId}
-                          onChange={(e) => setSearchAreaId(e.target.value)}
-                          className="w-full px-4 py-3 bg-cream/10 border border-caramel/25 rounded-2xl text-brownie text-sm font-semibold focus:outline-none disabled:opacity-50"
-                        >
-                          <option value="">All Areas</option>
-                          {searchAreasList.map((a) => (
-                            <option key={a.id} value={a.id}>{a.name}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-coffee uppercase tracking-wider">Property Type</label>
-                        <select
-                          value={searchType}
-                          onChange={(e) => setSearchType(e.target.value)}
-                          className="w-full px-4 py-3 bg-cream/10 border border-caramel/25 rounded-2xl text-brownie text-sm font-semibold focus:outline-none"
-                        >
-                          <option value="">All Types</option>
-                          <option value="HOUSE">House</option>
-                          <option value="APARTMENT">Apartment</option>
-                          <option value="VILLA">Villa</option>
-                          <option value="LAND">Land</option>
-                          <option value="COMMERCIAL">Commercial</option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-coffee uppercase tracking-wider">Min Budget (₹)</label>
-                        <input
-                          type="number"
-                          value={searchMinPrice}
-                          onChange={(e) => setSearchMinPrice(e.target.value)}
-                          placeholder="e.g. 500000"
-                          className="w-full px-4 py-2.5 bg-cream/10 border border-caramel/25 rounded-2xl text-brownie placeholder-coffee/40 text-sm font-semibold focus:outline-none"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-coffee uppercase tracking-wider">Max Budget (₹)</label>
-                        <input
-                          type="number"
-                          value={searchMaxPrice}
-                          onChange={(e) => setSearchMaxPrice(e.target.value)}
-                          placeholder="e.g. 20000000"
-                          className="w-full px-4 py-2.5 bg-cream/10 border border-caramel/25 rounded-2xl text-brownie placeholder-coffee/40 text-sm font-semibold focus:outline-none"
-                        />
-                      </div>
-
-                      <div className="flex gap-2">
-                        <button
-                          type="submit"
-                          className="flex-grow py-3 bg-brownie hover:bg-caramel text-cream font-bold rounded-2xl shadow-sm text-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                        >
-                          <Search className="h-4 w-4" /> Search
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleClearFilters}
-                          className="px-4 py-3 bg-cream border border-caramel/20 hover:bg-caramel/10 text-coffee font-bold rounded-2xl text-sm transition-colors cursor-pointer"
-                        >
-                          Clear
-                        </button>
-                      </div>
-                    </div>
-                  </form>
+                {/* Cascading Location & Budget Filters (Desktop View) */}
+                <section className="hidden md:block bg-cream/40 border border-caramel/25 p-6 rounded-3xl shadow-sm">
+                  {renderFilterForm(false)}
                 </section>
+
+                {/* Mobile View Filter Button */}
+                <div className="md:hidden">
+                  <button
+                    type="button"
+                    onClick={() => setShowMobileFilters(true)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-brownie hover:bg-caramel text-cream font-bold rounded-2xl shadow-sm border border-caramel/30 text-sm cursor-pointer transition-colors"
+                  >
+                    <Filter className="h-4 w-4 text-caramel" /> Filter & Search Properties
+                  </button>
+                </div>
+
+                {/* Mobile Filter Drawer Overlay */}
+                {showMobileFilters && (
+                  <div className="fixed inset-0 z-50 flex justify-end md:hidden">
+                    <div 
+                      className="absolute inset-0 bg-black/55 backdrop-blur-xs transition-opacity duration-300 animate-fade-in"
+                      onClick={() => setShowMobileFilters(false)}
+                    />
+                    <div className="relative w-full max-w-md bg-cream h-full shadow-2xl p-6 overflow-y-auto z-10 flex flex-col justify-between border-l border-caramel/30 animate-slide-right opacity-0 [animation-fill-mode:forwards] no-scrollbar">
+                      <div>
+                        <div className="flex justify-between items-center pb-4 border-b border-caramel/20 mb-6">
+                          <h3 className="font-extrabold text-brownie text-lg flex items-center gap-2">
+                            <Filter className="h-5 w-5 text-caramel" /> Search Filters
+                          </h3>
+                          <button 
+                            onClick={() => setShowMobileFilters(false)}
+                            className="px-4 py-2 rounded-xl bg-caramel/10 text-brownie hover:bg-caramel/20 font-extrabold text-sm cursor-pointer"
+                          >
+                            Close
+                          </button>
+                        </div>
+                        {renderFilterForm(true)}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Listings Grid */}
                 {browseLoading ? (
@@ -488,18 +674,46 @@ export default function BuyerDashboardPage() {
                         >
                           <div className="h-44 bg-coffee/10 relative overflow-hidden">
                             {property.images && property.images.length > 0 ? (
-                              <img 
-                                src={property.images[0].url} 
-                                alt={property.title} 
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                              />
+                              <>
+                                <img 
+                                  src={property.images[cardImageIndices[property.id] || 0].url} 
+                                  alt={property.title} 
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                />
+                                {property.images.length > 1 && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handlePrevCardImage(e, property)}
+                                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 text-cream p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 cursor-pointer flex items-center justify-center"
+                                    >
+                                      <ChevronLeft className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handleNextCardImage(e, property)}
+                                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 text-cream p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 cursor-pointer flex items-center justify-center"
+                                    >
+                                      <ChevronRight className="h-4 w-4" />
+                                    </button>
+                                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 bg-black/35 px-2 py-0.5 rounded-full z-10">
+                                      {property.images.map((_, idx) => (
+                                        <div 
+                                          key={idx} 
+                                          className={`h-1 w-1 rounded-full ${(cardImageIndices[property.id] || 0) === idx ? 'bg-cream' : 'bg-cream/40'}`}
+                                        />
+                                      ))}
+                                    </div>
+                                  </>
+                                )}
+                              </>
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-xs text-coffee font-bold">No Image</div>
                             )}
-                            <span className="absolute bottom-3 left-3 bg-brownie text-cream text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                            <span className="absolute bottom-3 left-3 bg-brownie text-cream text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider z-10">
                               {property.propertyType.toLowerCase()}
                             </span>
-                            <span className="absolute top-3 right-3 bg-emerald-500 text-white text-[9px] font-extrabold px-2.5 py-1 rounded-full uppercase">
+                            <span className="absolute top-3 right-3 bg-emerald-500 text-white text-[9px] font-extrabold px-2.5 py-1 rounded-full uppercase z-10">
                               Approved
                             </span>
                           </div>
@@ -522,6 +736,24 @@ export default function BuyerDashboardPage() {
                               <span className="flex items-center gap-1"><Bed className="h-4 w-4 text-caramel" /> {property.bedrooms} Bed</span>
                               <span className="flex items-center gap-1"><Bath className="h-4 w-4 text-caramel" /> {property.bathrooms} Bath</span>
                             </div>
+
+                            {property.amenities && property.amenities.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 pt-2">
+                                {property.amenities.slice(0, 3).map(({ amenity }) => (
+                                  <span 
+                                    key={amenity.id} 
+                                    className="px-2 py-0.5 rounded bg-caramel/10 text-coffee text-[9px] font-bold uppercase tracking-wider"
+                                  >
+                                    {amenity.name}
+                                  </span>
+                                ))}
+                                {property.amenities.length > 3 && (
+                                  <span className="px-2 py-0.5 rounded bg-coffee/10 text-coffee/70 text-[9px] font-bold uppercase tracking-wider">
+                                    +{property.amenities.length - 3} More
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -646,7 +878,7 @@ export default function BuyerDashboardPage() {
               onClick={() => setSelectedProperty(null)}
             />
             
-            <div className="relative w-full max-w-2xl bg-cream h-full shadow-2xl p-6 overflow-y-auto z-10 animate-slide-right opacity-0 [animation-fill-mode:forwards] border-l border-caramel/30 flex flex-col justify-between">
+            <div className="relative w-full max-w-2xl bg-cream h-full shadow-2xl p-6 overflow-y-auto no-scrollbar z-10 animate-slide-right opacity-0 [animation-fill-mode:forwards] border-l border-caramel/30 flex flex-col justify-between">
               <div>
                 <div className="flex justify-between items-center pb-4 border-b border-caramel/20 mb-6">
                   <h3 className="font-extrabold text-brownie text-lg">Property Details</h3>
@@ -659,9 +891,43 @@ export default function BuyerDashboardPage() {
                 </div>
 
                 <div className="space-y-6">
-                  <div className="h-72 bg-coffee/10 rounded-3xl overflow-hidden shadow-inner">
+                  <div className="h-72 bg-coffee/10 rounded-3xl overflow-hidden shadow-inner relative group">
                     {selectedProperty.images && selectedProperty.images.length > 0 ? (
-                      <img src={selectedProperty.images[0].url} className="w-full h-full object-cover animate-slide-left opacity-0 [animation-fill-mode:forwards]" alt={selectedProperty.title} />
+                      <>
+                        <img 
+                          src={selectedProperty.images[drawerImageIndex].url} 
+                          className="w-full h-full object-cover transition-opacity duration-300" 
+                          alt={selectedProperty.title} 
+                        />
+                        {selectedProperty.images.length > 1 && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setDrawerImageIndex(prev => (prev - 1 + selectedProperty.images.length) % selectedProperty.images.length)}
+                              className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 text-cream p-2 rounded-full cursor-pointer transition-colors z-10 flex items-center justify-center"
+                            >
+                              <ChevronLeft className="h-5 w-5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDrawerImageIndex(prev => (prev + 1) % selectedProperty.images.length)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 text-cream p-2 rounded-full cursor-pointer transition-colors z-10 flex items-center justify-center"
+                            >
+                              <ChevronRight className="h-5 w-5" />
+                            </button>
+                            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 bg-black/45 px-3 py-1 rounded-full z-10">
+                              {selectedProperty.images.map((_, idx) => (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  onClick={() => setDrawerImageIndex(idx)}
+                                  className={`h-1.5 w-1.5 rounded-full transition-all ${idx === drawerImageIndex ? 'bg-cream w-3' : 'bg-cream/55 hover:bg-cream'}`}
+                                />
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-xs text-coffee">No Image</div>
                     )}
@@ -694,6 +960,25 @@ export default function BuyerDashboardPage() {
                   <div className="space-y-2 animate-slide-right opacity-0 [animation-fill-mode:forwards]">
                     <h5 className="font-bold text-brownie text-sm">Description</h5>
                     <p className="text-xs text-coffee leading-relaxed whitespace-pre-line font-medium">{selectedProperty.description}</p>
+                  </div>
+
+                  {/* Amenities Section */}
+                  <div className="space-y-3 animate-slide-left opacity-0 [animation-fill-mode:forwards]">
+                    <h5 className="font-bold text-brownie text-sm">Amenities</h5>
+                    {selectedProperty.amenities && selectedProperty.amenities.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-3">
+                        {selectedProperty.amenities.map(({ amenity }) => (
+                          <div key={amenity.id} className="flex items-center gap-2 text-xs font-semibold text-coffee">
+                            <div className="flex items-center justify-center h-5 w-5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600">
+                              <CheckCircle className="h-3.5 w-3.5" />
+                            </div>
+                            <span>{amenity.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-coffee font-medium">No amenities listed.</p>
+                    )}
                   </div>
 
                   {/* Quick Contact Form */}

@@ -7,7 +7,7 @@ import { apiRequest } from '../../../utils/api';
 import DashboardNavbar from '../../../components/DashboardNavbar';
 import { useRouter } from 'next/navigation';
 import { 
-  PlusCircle, Loader2, MapPin, Bed, Bath, Trash2, Tag, ChevronLeft, ChevronRight, XCircle, Phone
+  PlusCircle, Loader2, MapPin, Bed, Bath, Trash2, Tag, ChevronLeft, ChevronRight, XCircle, Phone, Edit3, Filter
 } from 'lucide-react';
 
 export default function SellerDashboardPage() {
@@ -30,6 +30,8 @@ export default function SellerDashboardPage() {
   const [nextViewId, setNextViewId] = useState(1);
   const [sellerFilterTitle, setSellerFilterTitle] = useState('');
   const [sellerFilterViewId, setSellerFilterViewId] = useState('');
+  const [editingListing, setEditingListing] = useState(null);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   
   // Add Property Form States
   const [formTitle, setFormTitle] = useState('');
@@ -79,21 +81,29 @@ export default function SellerDashboardPage() {
   useEffect(() => {
     if (formStateId) {
       fetchCities(formStateId);
-      setCitiesList([]);
-      setAreasList([]);
-      setFormCityId('');
-      setFormAreaId('');
+      if (editingListing && editingListing.stateId === formStateId) {
+        // Keep loaded city and area
+      } else {
+        setCitiesList([]);
+        setAreasList([]);
+        setFormCityId('');
+        setFormAreaId('');
+      }
     }
-  }, [formStateId]);
+  }, [formStateId, editingListing]);
 
   // Load areas cascading when city selection triggers (Add form)
   useEffect(() => {
     if (formCityId) {
       fetchAreas(formCityId);
-      setAreasList([]);
-      setFormAreaId('');
+      if (editingListing && editingListing.cityId === formCityId) {
+        // Keep loaded area
+      } else {
+        setAreasList([]);
+        setFormAreaId('');
+      }
     }
-  }, [formCityId]);
+  }, [formCityId, editingListing]);
 
   const fetchAmenities = async () => {
     try {
@@ -234,7 +244,44 @@ export default function SellerDashboardPage() {
     );
   };
 
-  // Submit Listing Form
+  // Start editing a property listing
+  const handleStartEdit = (listing) => {
+    setEditingListing(listing);
+    setFormTitle(listing.title);
+    setFormDesc(listing.description || '');
+    setFormPrice(listing.price.toString());
+    setFormArea(listing.area.toString());
+    setFormBedrooms(listing.bedrooms.toString());
+    setFormBathrooms(listing.bathrooms.toString());
+    setFormParking(!!listing.parking);
+    setFormType(listing.propertyType);
+    setFormStateId(listing.stateId);
+    setFormCityId(listing.cityId);
+    setFormAreaId(listing.areaId);
+    setSelectedAmenities(listing.amenities?.map(({ amenityId }) => amenityId) || []);
+    setUploadedImages(listing.images?.map(({ url }) => url) || []);
+    setActiveTab('ADD_PROPERTY');
+  };
+
+  const handleNewListingClick = () => {
+    setEditingListing(null);
+    setFormTitle('');
+    setFormDesc('');
+    setFormPrice('');
+    setFormArea('');
+    setFormBedrooms('2');
+    setFormBathrooms('2');
+    setFormParking(false);
+    setFormType('HOUSE');
+    setFormStateId('');
+    setFormCityId('');
+    setFormAreaId('');
+    setSelectedAmenities([]);
+    setUploadedImages([]);
+    setActiveTab('ADD_PROPERTY');
+  };
+
+  // Submit Listing Form (Create or Update)
   const handleAddPropertySubmit = async (e) => {
     e.preventDefault();
     setFormError('');
@@ -264,10 +311,18 @@ export default function SellerDashboardPage() {
         images: uploadedImages,
       };
 
-      const res = await apiRequest('/properties', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
+      let res;
+      if (editingListing) {
+        res = await apiRequest(`/properties/${editingListing.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(payload),
+        });
+      } else {
+        res = await apiRequest('/properties', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+      }
 
       const resData = await res.json();
 
@@ -275,7 +330,12 @@ export default function SellerDashboardPage() {
         throw new Error(resData.message || 'Failed to submit property.');
       }
 
-      setFormSuccess('Property listing created and submitted for Admin verification!');
+      setFormSuccess(
+        editingListing
+          ? 'Property listing updated and submitted for Admin verification!'
+          : 'Property listing created and submitted for Admin verification!'
+      );
+      
       setFormTitle('');
       setFormDesc('');
       setFormPrice('');
@@ -285,6 +345,7 @@ export default function SellerDashboardPage() {
       setFormAreaId('');
       setSelectedAmenities([]);
       setUploadedImages([]);
+      setEditingListing(null);
       
       setTimeout(() => {
         setActiveTab('MY_LISTINGS');
@@ -332,6 +393,57 @@ export default function SellerDashboardPage() {
     }).catch(err => console.error('Could not copy email:', err));
     
     window.location.href = `mailto:${email}?subject=Regarding your enquiry on ${encodeURIComponent(title)}`;
+  };
+
+  const renderSellerFilterForm = (isMobile = false) => {
+    return (
+      <form 
+        onSubmit={(e) => {
+          handleSellerSearch(e);
+          if (isMobile) setShowMobileFilters(false);
+        }} 
+        className={isMobile ? "space-y-4" : "bg-cream/40 border border-caramel/25 p-5 rounded-3xl grid grid-cols-1 sm:grid-cols-3 gap-4 items-end shadow-sm"}
+      >
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-bold text-brownie uppercase tracking-wider block">Property Title</label>
+          <input 
+            type="text"
+            value={sellerFilterTitle}
+            onChange={(e) => setSellerFilterTitle(e.target.value)}
+            placeholder="e.g. BHK, Villa, House"
+            className="w-full px-4 py-2.5 bg-cream border border-caramel/20 rounded-xl text-xs text-brownie placeholder-coffee/40 font-medium focus:outline-none focus:ring-1 focus:ring-caramel"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-bold text-brownie uppercase tracking-wider block">View ID</label>
+          <input 
+            type="text"
+            value={sellerFilterViewId}
+            onChange={(e) => setSellerFilterViewId(e.target.value)}
+            placeholder="e.g. 1 or #1"
+            className="w-full px-4 py-2.5 bg-cream border border-caramel/20 rounded-xl text-xs text-brownie placeholder-coffee/40 font-medium focus:outline-none focus:ring-1 focus:ring-caramel"
+          />
+        </div>
+        <div className="flex gap-2">
+          <button 
+            type="submit"
+            className="flex-grow py-2.5 rounded-xl bg-brownie hover:bg-caramel text-cream font-bold text-xs transition-colors cursor-pointer text-center text-white"
+          >
+            Search
+          </button>
+          <button 
+            type="button"
+            onClick={() => {
+              handleSellerReset();
+              if (isMobile) setShowMobileFilters(false);
+            }}
+            className="px-4 py-2.5 rounded-xl bg-caramel/10 hover:bg-caramel/20 text-brownie font-bold text-xs transition-colors cursor-pointer"
+          >
+            Reset
+          </button>
+        </div>
+      </form>
+    );
   };
 
   if (!user || user.role !== 'SELLER') {
@@ -414,7 +526,7 @@ export default function SellerDashboardPage() {
                 <div className="flex justify-between items-center">
                   <h2 className="text-2xl font-extrabold text-brownie">My Properties</h2>
                   <button 
-                    onClick={() => setActiveTab('ADD_PROPERTY')} 
+                    onClick={handleNewListingClick} 
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brownie hover:bg-caramel text-cream font-bold text-xs transition-colors shadow-sm shadow-brownie/10 cursor-pointer"
                   >
                     <PlusCircle className="h-4 w-4" />
@@ -422,44 +534,47 @@ export default function SellerDashboardPage() {
                   </button>
                 </div>
 
-                {/* Seller Filters Panel */}
-                <form onSubmit={handleSellerSearch} className="bg-cream/40 border border-caramel/25 p-5 rounded-3xl grid grid-cols-1 sm:grid-cols-3 gap-4 items-end shadow-sm">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-brownie uppercase tracking-wider block">Property Title</label>
-                    <input 
-                      type="text"
-                      value={sellerFilterTitle}
-                      onChange={(e) => setSellerFilterTitle(e.target.value)}
-                      placeholder="e.g. BHK, Villa, House"
-                      className="w-full px-4 py-2.5 bg-cream border border-caramel/20 rounded-xl text-xs text-brownie placeholder-coffee/40 font-medium focus:outline-none focus:ring-1 focus:ring-caramel"
+                {/* Seller Filters Panel (Desktop View) */}
+                <div className="hidden md:block">
+                  {renderSellerFilterForm(false)}
+                </div>
+
+                {/* Mobile View Filter Button */}
+                <div className="md:hidden">
+                  <button
+                    type="button"
+                    onClick={() => setShowMobileFilters(true)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-brownie hover:bg-caramel text-cream font-bold rounded-2xl shadow-sm border border-caramel/30 text-sm cursor-pointer transition-colors"
+                  >
+                    <Filter className="h-4 w-4 text-caramel" /> Filter Listings
+                  </button>
+                </div>
+
+                {/* Mobile Filter Drawer Overlay */}
+                {showMobileFilters && (
+                  <div className="fixed inset-0 z-50 flex justify-end md:hidden">
+                    <div 
+                      className="absolute inset-0 bg-black/55 backdrop-blur-xs transition-opacity duration-300 animate-fade-in"
+                      onClick={() => setShowMobileFilters(false)}
                     />
+                    <div className="relative w-full max-w-md bg-cream h-full shadow-2xl p-6 overflow-y-auto z-10 flex flex-col justify-between border-l border-caramel/30 animate-slide-right opacity-0 [animation-fill-mode:forwards] no-scrollbar">
+                      <div>
+                        <div className="flex justify-between items-center pb-4 border-b border-caramel/20 mb-6">
+                          <h3 className="font-extrabold text-brownie text-lg flex items-center gap-2">
+                            <Filter className="h-5 w-5 text-caramel" /> Filter Listings
+                          </h3>
+                          <button 
+                            onClick={() => setShowMobileFilters(false)}
+                            className="px-4 py-2 rounded-xl bg-caramel/10 text-brownie hover:bg-caramel/20 font-extrabold text-sm cursor-pointer"
+                          >
+                            Close
+                          </button>
+                        </div>
+                        {renderSellerFilterForm(true)}
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-brownie uppercase tracking-wider block">View ID</label>
-                    <input 
-                      type="text"
-                      value={sellerFilterViewId}
-                      onChange={(e) => setSellerFilterViewId(e.target.value)}
-                      placeholder="e.g. 1 or #1"
-                      className="w-full px-4 py-2.5 bg-cream border border-caramel/20 rounded-xl text-xs text-brownie placeholder-coffee/40 font-medium focus:outline-none focus:ring-1 focus:ring-caramel"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <button 
-                      type="submit"
-                      className="flex-grow py-2.5 rounded-xl bg-brownie hover:bg-caramel text-cream font-bold text-xs transition-colors cursor-pointer text-center text-white"
-                    >
-                      Search
-                    </button>
-                    <button 
-                      type="button"
-                      onClick={handleSellerReset}
-                      className="px-4 py-2.5 rounded-xl bg-caramel/10 hover:bg-caramel/20 text-brownie font-bold text-xs transition-colors cursor-pointer"
-                    >
-                      Reset
-                    </button>
-                  </div>
-                </form>
+                )}
 
                 {loadingLists ? (
                   <div className="flex justify-center py-12"><Loader2 className="animate-spin text-brownie h-8 w-8" /></div>
@@ -551,6 +666,15 @@ export default function SellerDashboardPage() {
                             </button>
                             
                             <div className="flex gap-2">
+                              {listing.status === 'PENDING' && (
+                                <button
+                                  onClick={() => handleStartEdit(listing)}
+                                  className="flex items-center gap-1 px-4 py-2 rounded-xl bg-caramel hover:bg-brownie text-cream font-bold text-xs transition-colors shadow-sm cursor-pointer"
+                                >
+                                  <Edit3 className="h-3.5 w-3.5" />
+                                  Edit Listing
+                                </button>
+                              )}
                               {['APPROVED', 'AVAILABLE'].includes(listing.status) && (
                                 <button
                                   onClick={() => handleChangeStatus(listing.id, 'SOLD')}
@@ -600,7 +724,9 @@ export default function SellerDashboardPage() {
             {/* ADD PROPERTY TAB */}
             {activeTab === 'ADD_PROPERTY' && (
               <div className="bg-cream/40 border border-caramel/25 p-8 rounded-3xl shadow-sm space-y-6">
-                <h2 className="text-2xl font-extrabold text-brownie">Add New Property</h2>
+                <h2 className="text-2xl font-extrabold text-brownie">
+                  {editingListing ? 'Edit Property Listing' : 'Add New Property'}
+                </h2>
                 
                 {formError && <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-800 text-sm font-semibold">{formError}</div>}
                 {formSuccess && <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 text-sm font-semibold">{formSuccess}</div>}
@@ -822,10 +948,10 @@ export default function SellerDashboardPage() {
                     {formLoading ? (
                       <>
                         <Loader2 className="animate-spin h-5 w-5 mr-2" />
-                        Submitting listing...
+                        {editingListing ? 'Updating listing...' : 'Submitting listing...'}
                       </>
                     ) : (
-                      'Submit Property'
+                      editingListing ? 'Update Property' : 'Submit Property'
                     )}
                   </button>
                 </form>

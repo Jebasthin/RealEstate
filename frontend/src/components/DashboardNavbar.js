@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Menu, X, Home, LogOut, User, PlusCircle, Search, 
-  Shield, Mail, MessageSquare, Building, Phone
+  Shield, Mail, MessageSquare, Building, Phone,
+  ChevronDown, ChevronUp, Database
 } from 'lucide-react';
 
 export default function DashboardNavbar({
@@ -16,6 +17,25 @@ export default function DashboardNavbar({
   logout
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [masterOpen, setMasterOpen] = useState(
+    activeTab === 'USER_MASTER' || activeTab === 'LOCATION_MASTER'
+  );
+  const isMasterActive = activeTab === 'USER_MASTER' || activeTab === 'LOCATION_MASTER';
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setProfileDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const toggleDrawer = () => setIsOpen(!isOpen);
 
@@ -56,26 +76,63 @@ export default function DashboardNavbar({
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            {/* User Profile Badge */}
-            <div className="hidden sm:flex items-center gap-3 bg-caramel/10 px-4 py-2 rounded-2xl border border-caramel/15">
+          <div className="flex items-center gap-4 relative" ref={dropdownRef}>
+            {/* User Profile Badge Button */}
+            <button 
+              onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+              className="flex items-center gap-3 bg-caramel/10 hover:bg-caramel/20 px-4 py-2.5 rounded-2xl border border-caramel/15 transition-all duration-200 cursor-pointer select-none text-left focus:outline-none"
+            >
               <div className="h-8 w-8 rounded-xl bg-brownie text-cream flex items-center justify-center font-bold text-sm">
                 {getInitials(user?.fullName)}
               </div>
-              <div className="text-left leading-none">
+              <div className="hidden sm:block text-left leading-none pr-1">
                 <span className="block text-xs font-bold text-brownie truncate max-w-[120px]">{user?.fullName || 'User'}</span>
                 <span className="text-[9px] font-extrabold text-coffee uppercase tracking-wide">{role}</span>
               </div>
-            </div>
-
-            {/* Logout Button */}
-            <button 
-              onClick={logout}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cream border border-caramel/20 hover:bg-rose-500/10 hover:border-rose-500/20 hover:text-rose-700 text-coffee text-sm font-semibold transition-all duration-300 cursor-pointer"
-            >
-              <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline">Logout</span>
+              <ChevronDown className={`h-3.5 w-3.5 text-brownie transition-transform duration-200 ${profileDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
+
+            {/* Profile Dropdown Card */}
+            {profileDropdownOpen && (
+              <div className="absolute right-0 top-full mt-2 w-72 bg-cream border border-caramel/25 rounded-3xl shadow-xl p-5 z-50 text-center animate-slide-right opacity-0 [animation-fill-mode:forwards]">
+                {/* Large Avatar Initial */}
+                <div className="mx-auto h-16 w-16 rounded-full border-2 border-brownie flex items-center justify-center font-extrabold text-xl text-brownie bg-cream/50 mb-3 shadow-inner">
+                  {getInitials(user?.fullName)}
+                </div>
+                
+                {/* Greeting & Info */}
+                <h5 className="font-extrabold text-brownie text-sm">Hi, {user?.fullName || 'User'}</h5>
+                <span className="text-[10px] font-extrabold text-coffee/60 uppercase tracking-wider block mt-0.5">{role}</span>
+                
+                {/* Divider */}
+                <div className="h-[1px] bg-caramel/15 my-4" />
+                
+                {/* Action Buttons */}
+                <div className="grid grid-cols-2 gap-3">
+                  <button 
+                    onClick={() => {
+                      setActiveTab('OVERVIEW');
+                      setProfileDropdownOpen(false);
+                    }}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-caramel/15 hover:bg-caramel/25 text-brownie font-bold text-xs transition-colors cursor-pointer"
+                  >
+                    <User className="h-4 w-4 text-brownie" />
+                    <span>Profile</span>
+                  </button>
+
+                  <button 
+                    onClick={() => {
+                      setProfileDropdownOpen(false);
+                      logout();
+                    }}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 font-bold text-xs transition-colors cursor-pointer"
+                  >
+                    <LogOut className="h-4 w-4 text-rose-700" />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -214,26 +271,76 @@ export default function DashboardNavbar({
               )}
 
               {role === 'ADMIN' && (
-                <button
-                  onClick={() => handleMenuClick('MODERATION')}
-                  className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl font-bold text-sm transition-all duration-200 text-left ${
-                    activeTab === 'MODERATION' 
-                      ? 'bg-brownie text-cream shadow-md shadow-brownie/10' 
-                      : 'text-coffee hover:bg-caramel/10'
-                  }`}
-                >
-                  <div className="flex items-center gap-3.5">
-                    <Shield className="h-4.5 w-4.5" />
-                    <span>Moderation Queue</span>
+                <>
+                  <button
+                    onClick={() => handleMenuClick('MODERATION')}
+                    className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl font-bold text-sm transition-all duration-200 text-left ${
+                      activeTab === 'MODERATION' 
+                        ? 'bg-brownie text-cream shadow-md shadow-brownie/10' 
+                        : 'text-coffee hover:bg-caramel/10'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <Shield className="h-4.5 w-4.5" />
+                      <span>Moderation Queue</span>
+                    </div>
+                    {pendingCount > 0 && (
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold ${
+                        activeTab === 'MODERATION' ? 'bg-cream text-brownie' : 'bg-red-600 text-white'
+                      }`}>
+                        {pendingCount}
+                      </span>
+                    )}
+                  </button>
+
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => setMasterOpen(!masterOpen)}
+                      className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl font-bold text-sm transition-all duration-200 text-left cursor-pointer ${
+                        isMasterActive 
+                          ? 'bg-caramel/10 text-brownie border border-caramel/25' 
+                          : 'text-coffee hover:bg-caramel/10'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <Database className="h-4.5 w-4.5" />
+                        <span>Master</span>
+                      </div>
+                      {masterOpen ? (
+                        <ChevronUp className="h-4 w-4 text-coffee" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-coffee" />
+                      )}
+                    </button>
+                    
+                    {masterOpen && (
+                      <div className="pl-6 space-y-1 transition-all duration-200">
+                        <button
+                          onClick={() => handleMenuClick('USER_MASTER')}
+                          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold text-xs transition-all duration-200 text-left cursor-pointer ${
+                            activeTab === 'USER_MASTER'
+                              ? 'bg-brownie text-cream shadow-sm'
+                              : 'text-coffee/80 hover:bg-caramel/10'
+                          }`}
+                        >
+                          <User className="h-3.5 w-3.5" />
+                          <span>User Master</span>
+                        </button>
+                        <button
+                          onClick={() => handleMenuClick('LOCATION_MASTER')}
+                          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold text-xs transition-all duration-200 text-left cursor-pointer ${
+                            activeTab === 'LOCATION_MASTER'
+                              ? 'bg-brownie text-cream shadow-sm'
+                              : 'text-coffee/80 hover:bg-caramel/10'
+                          }`}
+                        >
+                          <Home className="h-3.5 w-3.5" />
+                          <span>Location Master</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  {pendingCount > 0 && (
-                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold ${
-                      activeTab === 'MODERATION' ? 'bg-cream text-brownie' : 'bg-red-600 text-white'
-                    }`}>
-                      {pendingCount}
-                    </span>
-                  )}
-                </button>
+                </>
               )}
             </nav>
           </div>

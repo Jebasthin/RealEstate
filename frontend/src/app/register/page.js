@@ -168,7 +168,7 @@ export default function RegisterPage() {
               <label className="block text-xs font-bold text-brownie uppercase tracking-wider mb-3">
                 Account Type
               </label>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <button
                   type="button"
                   onClick={() => setRole('BUYER')}
@@ -208,27 +208,6 @@ export default function RegisterPage() {
                   <h4 className="text-sm font-bold text-brownie">Seller</h4>
                   <p className="text-[11px] text-coffee mt-1 leading-normal font-medium">
                     List and advertise properties for rent/sale
-                  </p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setRole('ADMIN')}
-                  className={`relative p-4 rounded-2xl border text-left transition-all duration-300 focus:outline-none ${
-                    role === 'ADMIN'
-                      ? 'border-brownie bg-brownie/5 shadow-md shadow-brownie/5'
-                      : 'border-caramel/20 bg-cream/10 hover:border-caramel/50'
-                  }`}
-                >
-                  {role === 'ADMIN' && (
-                    <span className="absolute top-3 right-3 flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-caramel opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-caramel"></span>
-                    </span>
-                  )}
-                  <h4 className="text-sm font-bold text-brownie">Admin</h4>
-                  <p className="text-[11px] text-coffee mt-1 leading-normal font-medium">
-                    Moderate properties and system listings
                   </p>
                 </button>
               </div>
